@@ -57,7 +57,7 @@ public class RICHmonitor  extends DetectorMonitor {
         this.init(false);
 
         this.getCcdb().setVariation("default");
-        this.getCcdb().init(Arrays.asList(new String[]{"/calibration/rich/pixels:0:default:2020-08-06_23-18-47"}));
+        this.getCcdb().init(Arrays.asList(new String[]{"/calibration/rich/pixels"}));
 
     }
 
@@ -234,7 +234,7 @@ public class RICHmonitor  extends DetectorMonitor {
 
 
 
-    public void fillTile(long comp,long layer,DataBank head) {
+    public void fillTile(long comp,long layer) {
 
         int row = 0;
         int NumofTiles = 5;
@@ -423,14 +423,8 @@ public class RICHmonitor  extends DetectorMonitor {
        IndexedTable  rfConfig =  this.getCcdb().getConstants(runNumber,"/calibration/rich/pixels:0:default:2020-08-06_23-18-47");
        int stat = rfConfig.getIntValue("status",1,1,1);*/
 
-
-       int runNumber    = head.getInt("run", 0);
-       IndexedTable rfConfig = this.getCcdb().getConstants(runNumber,"/calibration/rich/pixels");
-       int stat = rfConfig.getIntValue("status");
-       if(stat !=0){}
-       else{
         this.getDataGroup().getItem(0,0,0).getH2F("RichScaler").fill(x*0.1,y*0.1);
-      }
+      
 
 
     }
@@ -489,7 +483,10 @@ public class RICHmonitor  extends DetectorMonitor {
         }
 
         //if (!testTriggerMask()) return;
-
+        if(!event.hasBank("RUN::config")) return;
+        DataBank head = event.getBank("RUN::config");
+        int run = head.getInt("run", 0);
+                
         // process event info and save into data group
         if(event.hasBank("RICH::adc")==true) {
             DataBank bank = event.getBank("RICH::adc");
@@ -531,10 +528,12 @@ public class RICHmonitor  extends DetectorMonitor {
 
                 if(tdc>0) {
                     this.getDataGroup().getItem(0,0,0).getH2F("occTDC").fill(comp,layer);
-                    DataBank head = event.getBank("RICH::tdc");
-
-
-                    fillTile(comp,layer,head);
+                    
+                    IndexedTable richStatus = this.getCcdb().getConstants(run,"/calibration/rich/pixels");
+                    int stat = richStatus.getIntValue("status", sector, layerbyte, (int) comp);
+                        
+                            
+                    if(stat==0) fillTile(comp,layer);
 
                     if(orderbyte == 1) this.getDataGroup().getItem(0,0,0).getH2F("tdc_leading_edge").fill(tdc, layer*3 + pmt);
                     if(orderbyte == 0) this.getDataGroup().getItem(0,0,0).getH2F("tdc_trailing_edge").fill(tdc, layer*3 + pmt);
